@@ -6,17 +6,10 @@ import Button from "../../components/shared/Button/Button";
 
 const Home = () => {
 
-  const signInLinkStyle = {
-    color: '#0077ff',
-    fontWeight: 'bold',
-    textDecoration: 'none',
-    marginLeft: '10px'
-  }
-
   const navigate = useNavigate();
 
   const startRegister = () => {
-    navigate('/register');
+    navigate('/authenticate');
   }
 
   return (
@@ -27,10 +20,9 @@ const Home = () => {
         wrap up the finishing touches, we're adding people gradually to make
         sure nothing breaks
       </p>
-      <Button onClick={startRegister} text="Get your username" />
+      <Button onClick={startRegister} text="Let's Go" />
       <div className={styles.signinWrapper}>
         <span className={styles.hasInvite}>Have an invite text?</span>
-        <Link style={signInLinkStyle} to="/login">Sign in</Link>
       </div>
       </Card>
     </div>
