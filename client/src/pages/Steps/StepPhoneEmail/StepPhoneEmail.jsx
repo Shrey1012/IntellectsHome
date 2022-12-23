@@ -8,11 +8,9 @@ const phoneEmailMap = {
   email: Email,
 };
 
-const StepPhoneEmail = () => {
+const StepPhoneEmail = ({onNext}) => {
   const [type, setType] = useState("phone");
   const Component = phoneEmailMap[type];
-
-  const onNext = () => {};
 
   return (
     <>
