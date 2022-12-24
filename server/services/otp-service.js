@@ -22,7 +22,7 @@ class OtpService {
     });
   }
 
-  verifyotp(hashedOtp,data) {
+  verifyOtp(hashedOtp,data) {
     let computedHash = hashService.hashOtp(data);
     return computedHash === hashedOtp;
   }
