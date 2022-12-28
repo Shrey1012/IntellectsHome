@@ -1,5 +1,5 @@
 import React from "react";
-import { useDispatch,useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { Link } from "react-router-dom";
 import { logout } from "../../../http";
 import { setAuth } from "../../../store/authSlice";
@@ -20,7 +20,7 @@ const Navigation = () => {
   };
 
   const dispatch = useDispatch();
-  const {isAuth,user} = useSelector((state) => state.auth)
+  const { isAuth, user } = useSelector((state) => state.auth);
 
   const logoutUser = async () => {
     try {
@@ -37,15 +37,23 @@ const Navigation = () => {
         <img src="/images/logo.png" alt="logo" />
         <span style={logoText}>IntellectsHome</span>
       </Link>
-      <div className={styles.navRight}>
-        <h3>{user.name}</h3>
-        <Link to="/">
-          <img className={styles.avatar} src={user.avatar} width="40" height="40" alt="avatar" />
-        </Link>
-      {isAuth && <button className={styles.logoutButton} onClick={logoutUser}>
-        <img src="/images/logout.png" alt="logout" />
-        </button>}
-      </div>
+      {isAuth && (
+        <div className={styles.navRight}>
+          <h3>{user?.name}</h3>
+            <Link to="/">
+              <img
+                className={styles.avatar}
+                src={user.avatar ? user.avatar : "/images/monkey-avatar.png"}
+                width="40"
+                height="40"
+                alt="avatar"
+              />
+            </Link>
+          <button className={styles.logoutButton} onClick={logoutUser}>
+            <img src="/images/logout.png" alt="logout" />
+          </button>
+        </div>
+      )}
     </nav>
   );
 };
