@@ -13,7 +13,7 @@ const StepAvatar = ({ onNext }) => {
   const { name, avatar } = useSelector((state) => state.activate);
   const [image, setImage] = useState("./images/monkey-avatar.png");
   const [loading, setLoading] = useState(false);
-  const [unMounted, setUnMounted] = useState(true);
+  const [unMounted, setUnMounted] = useState(false);
 
   const captureImage = (e) => {
     const file = e.target.files[0];
@@ -31,9 +31,9 @@ const StepAvatar = ({ onNext }) => {
     try {
       const { data } = await activate({ name, avatar });
       if (data.auth) {
-        if (unMounted) {
+        // if (!unMounted) {
           dispatch(setAuth(data));
-        }
+        // }
       }
     } catch (error) {
       console.log(error);
@@ -44,7 +44,7 @@ const StepAvatar = ({ onNext }) => {
 
   useEffect(() => {
     return () => {
-      setUnMounted(false);
+      setUnMounted(true);
     };
   }, []);
 
