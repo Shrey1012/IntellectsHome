@@ -1,7 +1,8 @@
 import { useStateWithCallback } from "./useStateWithCallback";
 import { useRef, useEffect, useCallback } from "react";
-import {socketInit} from "../socket/index";
+import { socketInit } from "../socket/index";
 import { ACTIONS } from "../actions";
+import freeice from "freeice";
 
 export const useWebRTC = (roomId, user) => {
   const [clients, setClients] = useStateWithCallback([]);
@@ -42,9 +43,149 @@ export const useWebRTC = (roomId, user) => {
         }
 
         //socket emit JOIN socket io
-        socket.current.emit(ACTIONS.JOIN, {roomId,user});
+        socket.current.emit(ACTIONS.JOIN, { roomId, user });
       });
     });
+
+    // return () => {
+    //   //Leaving the room
+    //   localMediaStream.current.getTracks().forEach((track) => track.stop());
+
+    //   socket.current.emit(ACTIONS.LEAVE, { roomId });
+    // }
+
+  }, []);
+
+  useEffect(() => {
+    const handleNewPeer = async ({ peerId, createOffer, user: remoteUser }) => {
+      //if aleardy connected then give warning
+      if (peerId in connections.current) {
+        return console.warn(
+          `You are already connected with ${peerId} (${remoteUser.name})`
+        );
+      }
+
+      //create new peer connection
+      connections.current[peerId] = new RTCPeerConnection({
+        iceServers: freeice(),
+      });
+
+      //Handle new ice candidate
+      connections.current[peerId].onicecandidate = (event) => {
+        socket.current.emit(ACTIONS.RELAY_ICE, {
+          peerId,
+          iceCandidate: event.candidate,
+        });
+      };
+
+      //Handle on track on this connection
+      connections.current[peerId].ontrack = ({ streams: [remoteStream] }) => {
+        addNewClient(remoteUser, () => {
+          if (audioElements.current[remoteUser.id]) {
+            audioElements.current[remoteUser.id].srcObject = remoteStream;
+          } else {
+            let settled = false;
+            const interval = setInterval(() => {
+              if (audioElements.current[remoteUser.id]) {
+                audioElements.current[remoteUser.id].srcObject = remoteStream;
+                settled = true;
+              }
+              if (settled) {
+                clearInterval(interval);
+              }
+            }, 1000);
+          }
+        });
+      };
+
+      //Add local track to remote connection
+      localMediaStream.current.getTracks().forEach((track) => {
+        connections.current[peerId].addTrack(track, localMediaStream.current);
+      });
+
+      //Create offer
+      if (createOffer) {
+        const offer = await connections.current[peerId].createOffer();
+        
+        await connections.current[peerId].setLocalDescription(offer);
+
+        //send offer to another client
+        socket.current.emit(ACTIONS.RELAY_SDP, {
+          peerId,
+          sessionDescription: offer,
+        });
+      }
+    };
+
+    socket.current.on(ACTIONS.ADD_PEER, handleNewPeer);
+
+    return () => {
+      socket.current.off(ACTIONS.ADD_PEER, handleNewPeer);
+    };
+  }, []);
+
+  //Handle ice candidate
+  useEffect(() => {
+    socket.current.on(ACTIONS.ICE_CANDIDATE, ({ peerId, iceCandidate }) => {
+      if (iceCandidate) {
+        connections.current[peerId].addIceCandidate(iceCandidate);
+      }
+    });
+
+    return () => {
+      socket.current.off(ACTIONS.ICE_CANDIDATE);
+    };
+  }, []);
+
+  //Handle sdp
+  useEffect(() => {
+    const handleRemoteSdp = async ({
+      peerId,
+      sessionDescription: remoteSessionDescription,
+    }) => {
+      connections.current[peerId].setRemoteDescription(
+        new RTCSessionDescription(remoteSessionDescription)
+      );
+
+      //if session description is offer then create an answer
+      if (remoteSessionDescription.type === "offer") {
+        const connection = connections.current[peerId];
+        const answer = await connection.createAnswer();
+
+        connection.setLocalDescription(answer);
+
+        socket.current.emit(ACTIONS.RELAY_SDP, {
+          peerId,
+          sessionDescription: answer,
+        });
+      }
+    };
+
+      socket.current.on(ACTIONS.SESSION_DESCRIPTION, handleRemoteSdp);
+
+
+      return () => {
+        socket.current.off(ACTIONS.SESSION_DESCRIPTION);
+      };
+  }, []);
+
+  //Handle remove peer
+  useEffect(() => {
+    const handleRemovePeer = async ({ peerId, userId }) => {
+      if (connections.current[peerId]) {
+        connections.current[peerId].close();
+      }
+
+      delete connections.current[peerId];
+      delete audioElements.current[peerId];
+      setClients((list) => list.filter((client) => client.id !== userId));
+    };
+
+    socket.current.on(ACTIONS.REMOVE_PEER, handleRemovePeer);
+
+    return () => {
+      socket.current.off(ACTIONS.REMOVE_PEER);
+    };
   }, []);
 
   const provideRef = (instance, userId) => {
