@@ -1,0 +1,40 @@
+version: "3"
+services:
+  mongodb:
+    image: mongo
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - /var/IntellectsHome-data:/data/db
+  server:
+    build:
+      dockerfile: Dockerfile.prod
+      context: ./server/
+    container_name: server
+    restart: always
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./server/.env
+    volumes:
+      - ./server:/server
+      - /server/node_modules
+    depends_on:
+      - mongodb
+  client:
+    build:
+      dockerfile: Dockerfile.prod
+      context: ./
+    container_name: client
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file:
+      - ./client/.env
+    volumes:
+      - ./deploy/default.conf:/etc/nginx/sites-available/default
+      - /var/certs/etc-letsencrypt:/etc/letsencrypt
+    depends_on:
+      - server
